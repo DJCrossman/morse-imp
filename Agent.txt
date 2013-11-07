@@ -1,0 +1,43 @@
+server.log("started on " + http.agenturl());
+ 
+function requestHandler(request, response) {
+    server.log(request.body);
+    local rex = regexp("(.*)=(.*)&");
+    local msg = null;
+    for(local i = 0; i < request.body.len(); i+=1)
+    {
+        local cap = rex.capture(request.body, i);
+        local key = request.body.slice(cap[1].begin, cap[1].end)
+        server.log(key);
+        if(key == "Body")
+        {
+            msg = request.body.slice(cap[2].begin, cap[2].end);
+            server.log(msg);
+            sendToDevice(msg);
+            break;
+        }
+        i = cap[2].end;
+    }
+    response.header("content-type", "text/xml");
+    response.send(200, "<Response><Message>You said: " + msg + "</Message></Response>");
+}
+ 
+function sendToDevice(msg) {
+    device.send("incoming", msg);
+}
+ 
+function log (msg) {
+    server.log(msg);
+}
+
+function sendMessage(msg) {
+	local username = "";
+	local password = "";
+	local phoneNumber = "+12345678901"
+    local request = http.post("https://" + username + ":" + password + "@api.twilio.com/2010-04-01/Accounts/" + username + "/Messages", {}, "From=" + phoneNumber + "&To=" + phoneNumber + "&Body=" + msg);
+    local response = request.sendsync();
+}
+
+device.on("log", log);
+device.on("msg", sendMessage);
+http.onrequest(requestHandler);
